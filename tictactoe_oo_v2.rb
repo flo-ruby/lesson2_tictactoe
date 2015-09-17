@@ -4,18 +4,18 @@ class Board
   ROWS = [[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[1,5,9],[3,5,7]]
 
   def initialize
-    # Stores the plays, initially " "
-    @plays = Hash.new
-    (1..9).each {|i| @plays[i] = " "}
+    # Stores the data, initially " "
+    @data = Hash.new
+    (1..9).each {|i| @data[i] = " "}
     self.draw
   end
 
   def [](position)
-    @plays[position]
+    @data[position]
   end
 
   def []=(position, marker)
-    @plays[position] = marker
+    @data[position] = marker
     self.draw
   end
 
@@ -25,20 +25,28 @@ class Board
 
     # Draw the board
     draw_line
-    draw_line([@plays[1],@plays[2],@plays[3]])
+    draw_line([@data[1],@data[2],@data[3]])
     draw_line
     draw_separator
     draw_line
-    draw_line([@plays[4],@plays[5],@plays[6]])
+    draw_line([@data[4],@data[5],@data[6]])
     draw_line
     draw_separator
     draw_line
-    draw_line([@plays[7],@plays[8],@plays[9]])
+    draw_line([@data[7],@data[8],@data[9]])
     draw_line
   end
 
   def empty_positions
-    @plays.select {|k,v| v == " "}.keys
+    @data.select {|k,v| v == " "}.keys
+  end
+
+  def occupied_positions
+    @data.select {|k,v| v != " "}.keys
+  end
+
+  def full?
+    empty_positions == []
   end
 
   private
@@ -52,21 +60,20 @@ class Board
   end
 end
 
-class Mygame
-  attr_reader :values, :marker
+class Game
+  attr_reader :positions
 
-  def initialize(values, marker)
-    @values = values
-    @marker = marker
+  def initialize
+    @positions = []
   end
 
   def <<(position)
-    @values << position
+    @positions << position
   end
 
   def form_row?
     for row in Board::ROWS
-      return true if (row - values).empty?
+      return true if (row - positions).empty?
     end
     return false
   end
@@ -74,8 +81,8 @@ class Mygame
   def complete_row
     thirds_in_row = []
     for row in Board::ROWS
-      if (row - values).size == 1
-        thirds_in_row << (row - values).first
+      if (row - positions).size == 1
+        thirds_in_row << (row - positions).first
       end
     end
     return thirds_in_row
@@ -83,29 +90,22 @@ class Mygame
 end
 
 class Player
-  attr_reader :mygame
+  attr_reader :game
 
   def initialize(board, marker)
     @board = board
-    @mygame = Mygame.new([], marker)
+    @marker = marker
+    @game = Game.new
   end
 
   def add_to_board(position)
-    @board[position] = @mygame.marker
-    @mygame << position
+    @board[position] = @marker
+    @game << position
     @board.draw
-  end
-
-  def form_row?
-    @mygame.form_row?
   end
 end
 
 class Human < Player
-  def initialize(board)
-    super(board, "X")
-  end
-
   def pick
     available_positions = @board.empty_positions
     puts "Choose a position (from 1 to 9) to place a piece:"
@@ -117,16 +117,12 @@ class Human < Player
 end
 
 class Computer < Player
-  def initialize(board)
-    super(board, "O")
-  end
-
   def pick(other_game)
     # try to complete computer's rows
-    if (pos = @mygame.complete_row - other_game.values) != []
+    if (pos = @game.complete_row - @board.occupied_positions) != []
       choice = pos.first
     # try to block other player's rows
-    elsif (pos = other_game.complete_row - @mygame.values) != []
+    elsif (pos = other_game.complete_row - @board.occupied_positions) != []
       choice = pos.first
     else
     # random
@@ -136,24 +132,24 @@ class Computer < Player
   end
 end
 
-class Game
+class GamePlay
   def play
     board = Board.new
-    human = Human.new(board)
-    computer = Computer.new(board)
+    human = Human.new(board, "X")
+    computer = Computer.new(board, "O")
 
     loop do
       human.pick
-      if human.form_row?
+      if human.game.form_row?
         puts "Congrats, you won!"
         break
-      elsif board.empty_positions == []
+      elsif board.full?
         puts "It's a tie!"
         break
       end
 
-      computer.pick(human.mygame)
-      if computer.form_row?
+      computer.pick(human.game)
+      if computer.game.form_row?
         puts "Sorry, computer won!"
         break
       end
@@ -161,5 +157,4 @@ class Game
   end
 end
 
-game = Game.new
-game.play
+GamePlay.new.play
