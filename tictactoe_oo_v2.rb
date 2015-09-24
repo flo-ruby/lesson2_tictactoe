@@ -79,13 +79,13 @@ class Game
   end
 
   def complete_row
-    thirds_in_row = []
+    lasts_in_row = []
     for row in Board::ROWS
       if (row - positions).size == 1
-        thirds_in_row << (row - positions).first
+        lasts_in_row << (row - positions).first
       end
     end
-    return thirds_in_row
+    return lasts_in_row
   end
 end
 
